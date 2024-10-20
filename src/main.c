@@ -162,7 +162,7 @@ struct Entity CreateFoguete(float z_pos, struct Entity *next_entity) {
 
 void UpdateNave(struct Entity *nave) {
   if (game_state == 1) {
-    float mouse_x = (GetMouseX() - 400) / 21.0f;
+    float mouse_x = (GetMouseX() - 400) / -21.0f;
     float mouse_y = (GetMouseY() - 400) / -26.0f;
     (*nave).z += nave->dir * BOMBA_SPEED * GetFrameTime() +
                  difficulty * nave->dir * 0.5f;
@@ -240,7 +240,7 @@ int main() {
   // pipa_model = LoadModel("pipa.glb");
 
   last_mouse_pos = (Vector2){0, 0};
-  first_entity = malloc(sizeof(struct Entity));
+  first_entity = (struct Entity *)malloc(sizeof(struct Entity));
 
   *first_entity = (struct Entity){};
   *first_entity = CreatePipa();
@@ -286,7 +286,8 @@ void UpdateDrawFrame(struct Entity *first_entity) {
   if (game_state == 1) {
     timer += GetFrameTime();
     if (timer >= 1.3f - difficulty * 3.0f) {
-      struct Entity *bomba_pointer = malloc(sizeof(struct Entity));
+      struct Entity *bomba_pointer =
+          (struct Entity *)malloc(sizeof(struct Entity));
       float random_inimigo = rand() % 100;
       printf("random inimigo: %.3f\n", random_inimigo);
 
