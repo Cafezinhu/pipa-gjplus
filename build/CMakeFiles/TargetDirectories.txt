@@ -1,0 +1,3 @@
+/home/cafezinho/Projetos-Pessoais/raylib-experiment/build/CMakeFiles/my_project.dir
+/home/cafezinho/Projetos-Pessoais/raylib-experiment/build/CMakeFiles/edit_cache.dir
+/home/cafezinho/Projetos-Pessoais/raylib-experiment/build/CMakeFiles/rebuild_cache.dir
