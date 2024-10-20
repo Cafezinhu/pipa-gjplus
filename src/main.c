@@ -25,6 +25,8 @@ RenderTexture2D screen_tex;
 RenderTexture2D pipa_tex;
 
 Model pipa_model;
+Model bomba_model;
+Model foguete_model;
 
 Texture bullet_texture;
 
@@ -38,6 +40,7 @@ struct Entity {
   float y;
   float z;
   float angle;
+  float dir;
   Model model;
   bool dead;
 
@@ -88,7 +91,7 @@ struct Entity CreatePipa() {
 
 void UpdateBomba(struct Entity *bomba) {
   (*bomba).y += BOMBA_SPEED * GetFrameTime();
-  if (bomba->y > 15.0f)
+  if (bomba->y > 19.0f)
     (*bomba).dead = true;
 
   DrawModelEx(bomba->model, (Vector3){bomba->x, bomba->y, bomba->z},
@@ -97,12 +100,40 @@ void UpdateBomba(struct Entity *bomba) {
 
 struct Entity CreateBomba(float z_pos, struct Entity *next_entity) {
   struct Entity bomba = {};
-  bomba.model = LoadModel("bomba.glb");
+  bomba.model = bomba_model;
   bomba.y = -15.0f;
   bomba.z = z_pos;
   bomba.Update = &UpdateBomba;
   bomba.next_entity = next_entity;
   return bomba;
+}
+
+void UpdateFoguete(struct Entity *foguete) {
+  (*foguete).y += BOMBA_SPEED * GetFrameTime();
+  if (foguete->y > 19.0f)
+    (*foguete).dead = true;
+  (*foguete).z += (*foguete).dir * BOMBA_SPEED * GetFrameTime();
+  if (foguete->z > 8) {
+    (*foguete).z = 8.0f;
+    (*foguete).dir = -1.0f;
+  } else if (foguete->z < -8) {
+    (*foguete).z = -8.0f;
+    (*foguete).dir = 1.0f;
+  }
+
+  DrawModelEx(foguete->model, (Vector3){foguete->x, foguete->y, foguete->z},
+              (Vector3){0, 1, 0}, 0.0f, (Vector3){1, 1, 1}, WHITE);
+}
+
+struct Entity CreateFoguete(float z_pos, struct Entity *next_entity) {
+  struct Entity foguete = {};
+  foguete.model = foguete_model;
+  foguete.y = -15.0f;
+  foguete.z = z_pos;
+  foguete.dir = 1;
+  foguete.Update = &UpdateFoguete;
+  foguete.next_entity = next_entity;
+  return foguete;
 }
 
 // void UpdateBullet(struct Entity *bullet);
@@ -244,6 +275,9 @@ int main() {
   *first_entity = (struct Entity){};
   *first_entity = CreatePipa();
 
+  bomba_model = LoadModel("bomba.glb");
+  foguete_model = LoadModel("foguete.glb");
+
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
@@ -279,9 +313,16 @@ float timer = 0.0f;
 void UpdateDrawFrame(struct Entity *first_entity) {
   if (game_state == 1) {
     timer += GetFrameTime();
-    if (timer >= 2.0f) {
+    if (timer >= 1.3f) {
       struct Entity *bomba_pointer = malloc(sizeof(struct Entity));
-      *bomba_pointer = CreateBomba(0.0f, first_entity->next_entity);
+      float random_inimigo = rand() % 100;
+      printf("%.3f\n", random_inimigo);
+      if (random_inimigo < 12)
+        *bomba_pointer =
+            CreateFoguete(rand() % 16 - 8, first_entity->next_entity);
+      else
+        *bomba_pointer =
+            CreateBomba(rand() % 16 - 8, first_entity->next_entity);
       (*first_entity).next_entity = bomba_pointer;
       timer = 0.0f;
     }
