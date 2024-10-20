@@ -201,6 +201,7 @@ struct Entity CreateNave(float z_pos, struct Entity *next_entity) {
 }
 
 void UpdateDrawFrame(struct Entity *first_entity);
+void UpdateEmscripten();
 
 //------------------ASSETS--------------
 
@@ -212,7 +213,7 @@ int main() {
 #endif
 
   SetConfigFlags(FLAG_MSAA_4X_HINT);
-  InitWindow(screenWidth, screenHeight, "Domestique");
+  InitWindow(screenWidth, screenHeight, "DS Pipa");
 
 #ifndef PLATFORM_ANDROID
   ChangeDirectory("assets");
@@ -250,7 +251,7 @@ int main() {
   nave_model = LoadModel("nave.glb");
 
 #if defined(PLATFORM_WEB)
-  emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+  emscripten_set_main_loop(UpdateEmscripten, 0, 1);
 #else
   // SetTargetFPS(60);
   // struct Entity *first_entity = (struct Entity *)malloc(sizeof(struct
