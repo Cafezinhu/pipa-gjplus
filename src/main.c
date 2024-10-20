@@ -15,6 +15,10 @@
 #include <emscripten/emscripten.h>
 #endif
 
+int points;
+float difficulty;
+const float DIFFICULTY_SCALE = .004;
+
 const int screenWidth = 800;
 const int screenHeight = 800;
 const int PLAYER_SPEED = 10;
@@ -51,29 +55,32 @@ struct Entity *first_entity;
 
 void UpdatePipa(struct Entity *pipa) {
   float angle = 0.0f;
-  if (IsKeyDown(KEY_D)) {
-    (*pipa).z -= PLAYER_SPEED * GetFrameTime();
-    angle = 35.0f;
-  } else if (IsKeyDown(KEY_A)) {
-    (*pipa).z += PLAYER_SPEED * GetFrameTime();
-    angle = -35.0f;
+
+  if (game_state == 1) {
+    if (IsKeyDown(KEY_D)) {
+      (*pipa).z -= PLAYER_SPEED * GetFrameTime();
+      angle = 35.0f;
+    } else if (IsKeyDown(KEY_A)) {
+      (*pipa).z += PLAYER_SPEED * GetFrameTime();
+      angle = -35.0f;
+    }
+
+    if (pipa->z > 8.5f)
+      (*pipa).z = 8.5f;
+    else if (pipa->z < -8.5f)
+      (*pipa).z = -8.5f;
+
+    if (IsKeyDown(KEY_W)) {
+      (*pipa).y += PLAYER_SPEED * GetFrameTime();
+    } else if (IsKeyDown(KEY_S)) {
+      (*pipa).y -= PLAYER_SPEED * GetFrameTime();
+    }
+
+    if (pipa->y > 13.0f)
+      (*pipa).y = 13.0f;
+    else if (pipa->y < 1.0f)
+      (*pipa).y = 1.0f;
   }
-
-  if (pipa->z > 8.5f)
-    (*pipa).z = 8.5f;
-  else if (pipa->z < -8.5f)
-    (*pipa).z = -8.5f;
-
-  if (IsKeyDown(KEY_W)) {
-    (*pipa).y += PLAYER_SPEED * GetFrameTime();
-  } else if (IsKeyDown(KEY_S)) {
-    (*pipa).y -= PLAYER_SPEED * GetFrameTime();
-  }
-
-  if (pipa->y > 13.0f)
-    (*pipa).y = 13.0f;
-  else if (pipa->y < 1.0f)
-    (*pipa).y = 1.0f;
 
   DrawModelEx(pipa->model, (Vector3){pipa->x, pipa->y, pipa->z},
               (Vector3){0, 1, 0}, angle, (Vector3){1, 1, 1}, WHITE);
@@ -90,9 +97,15 @@ struct Entity CreatePipa() {
 }
 
 void UpdateBomba(struct Entity *bomba) {
-  (*bomba).y += BOMBA_SPEED * GetFrameTime();
-  if (bomba->y > 19.0f)
-    (*bomba).dead = true;
+  if (game_state == 1) {
+    (*bomba).y += BOMBA_SPEED * GetFrameTime() + difficulty;
+    if (bomba->y > 19.0f) {
+      difficulty += DIFFICULTY_SCALE;
+      points += 1;
+
+      (*bomba).dead = true;
+    }
+  }
 
   DrawModelEx(bomba->model, (Vector3){bomba->x, bomba->y, bomba->z},
               (Vector3){0, 1, 0}, 0.0f, (Vector3){1, 1, 1}, WHITE);
@@ -109,16 +122,22 @@ struct Entity CreateBomba(float z_pos, struct Entity *next_entity) {
 }
 
 void UpdateFoguete(struct Entity *foguete) {
-  (*foguete).y += BOMBA_SPEED * GetFrameTime();
-  if (foguete->y > 19.0f)
-    (*foguete).dead = true;
-  (*foguete).z += (*foguete).dir * BOMBA_SPEED * GetFrameTime();
-  if (foguete->z > 8) {
-    (*foguete).z = 8.0f;
-    (*foguete).dir = -1.0f;
-  } else if (foguete->z < -8) {
-    (*foguete).z = -8.0f;
-    (*foguete).dir = 1.0f;
+  if (game_state == 1) {
+    (*foguete).y += BOMBA_SPEED * GetFrameTime() + difficulty;
+    if (foguete->y > 19.0f) {
+      (*foguete).dead = true;
+      difficulty += DIFFICULTY_SCALE;
+      points += 1;
+    }
+    (*foguete).z +=
+        foguete->dir * BOMBA_SPEED * GetFrameTime() + difficulty * foguete->dir;
+    if (foguete->z > 8) {
+      (*foguete).z = 8.0f;
+      (*foguete).dir = -1.0f;
+    } else if (foguete->z < -8) {
+      (*foguete).z = -8.0f;
+      (*foguete).dir = 1.0f;
+    }
   }
 
   DrawModelEx(foguete->model, (Vector3){foguete->x, foguete->y, foguete->z},
@@ -313,10 +332,10 @@ float timer = 0.0f;
 void UpdateDrawFrame(struct Entity *first_entity) {
   if (game_state == 1) {
     timer += GetFrameTime();
-    if (timer >= 1.3f) {
+    if (timer >= 1.3f - difficulty * 3.0f) {
       struct Entity *bomba_pointer = malloc(sizeof(struct Entity));
       float random_inimigo = rand() % 100;
-      printf("%.3f\n", random_inimigo);
+
       if (random_inimigo < 12)
         *bomba_pointer =
             CreateFoguete(rand() % 16 - 8, first_entity->next_entity);
@@ -345,7 +364,7 @@ void UpdateDrawFrame(struct Entity *first_entity) {
   struct Entity *previous_entity = NULL;
   while (entity != NULL) {
     if (entity->dead) {
-      printf("Killing entity\n");
+      // printf("Killing entity\n");
       struct Entity *next_entity = entity->next_entity;
       struct Entity *dead_entity = entity;
       if (first_entity != NULL && previous_entity != NULL) {
@@ -356,6 +375,17 @@ void UpdateDrawFrame(struct Entity *first_entity) {
       }
       free(dead_entity);
     } else {
+      if (entity != first_entity && game_state == 1) {
+        // TODO: colisao
+        Vector2 entity_pos = {entity->z, entity->y};
+        Vector2 pipa_pos = {first_entity->z, first_entity->y};
+
+        float distance = Vector2Distance(entity_pos, pipa_pos);
+        if (distance <= 2.0f) {
+          printf("COLISAO\n");
+          game_state = 2;
+        }
+      }
       entity->Update(entity);
       previous_entity = entity;
       entity = entity->next_entity;
@@ -413,6 +443,12 @@ void UpdateDrawFrame(struct Entity *first_entity) {
     if (IsKeyPressed(KEY_SPACE)) {
       game_state = 1;
     }
+  }
+
+  if (game_state > 0) {
+    char points_text[30];
+    sprintf(points_text, "SCORE: %d", points);
+    DrawText(points_text, 210, 60, 20, DARKGREEN);
   }
 
   EndDrawing();
