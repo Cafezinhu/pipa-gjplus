@@ -31,6 +31,7 @@ RenderTexture2D pipa_tex;
 Model pipa_model;
 Model bomba_model;
 Model foguete_model;
+Model nave_model;
 
 Texture bullet_texture;
 
@@ -105,6 +106,8 @@ void UpdateBomba(struct Entity *bomba) {
 
       (*bomba).dead = true;
     }
+  } else if (game_state == 0) {
+    (*bomba).dead = true;
   }
 
   DrawModelEx(bomba->model, (Vector3){bomba->x, bomba->y, bomba->z},
@@ -138,6 +141,8 @@ void UpdateFoguete(struct Entity *foguete) {
       (*foguete).z = -8.0f;
       (*foguete).dir = 1.0f;
     }
+  } else if (game_state == 0) {
+    (*foguete).dead = true;
   }
 
   DrawModelEx(foguete->model, (Vector3){foguete->x, foguete->y, foguete->z},
@@ -155,99 +160,45 @@ struct Entity CreateFoguete(float z_pos, struct Entity *next_entity) {
   return foguete;
 }
 
-// void UpdateBullet(struct Entity *bullet);
-// void UpdateBullet(struct Entity *bullet) {
-//   (*bullet).x += BULLET_SPEED * GetFrameTime() * bullet->scaleX;
-//   Rectangle source_rec = {bullet->texture.width, 0,
-//                           bullet->texture.width * bullet->scaleX,
-//                           bullet->texture.height};
-//
-//   Rectangle dest_rec = {bullet->x, bullet->y, bullet->texture.width,
-//                         bullet->texture.height};
-//
-//   DrawTexturePro(bullet->texture, source_rec, dest_rec, (Vector2){0, 0}, 0,
-//                  WHITE);
-//
-//   if (bullet->x > screenWidth || bullet->x < 0) {
-//     (*bullet).dead = true;
-//   }
-// }
-//
-// struct Entity CreateBullet(int x, int y, int dir, struct Entity
-// *next_entity); struct Entity CreateBullet(int x, int y, int dir, struct
-// Entity *next_entity) {
-//   struct Entity bullet = {};
-//
-//   bullet.x = x;
-//   bullet.y = y;
-//   bullet.scaleX = (float)dir;
-//   bullet.scaleY = 1.0;
-//   bullet.texture = bullet_texture;
-//   bullet.next_entity = next_entity;
-//   bullet.Update = &UpdateBullet;
-//
-//   return bullet;
-// }
-//
-// void UpdatePlayer(struct Entity *player);
-// void UpdatePlayer(struct Entity *player) {
-//   Vector2 vec = {};
-//
-//   if (IsKeyDown(KEY_D) ||
-//       IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_RIGHT)) {
-//     vec.x = 1;
-//     (*player).scaleX = 1;
-//   } else if (IsKeyDown(KEY_A) ||
-//              IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_LEFT)) {
-//     vec.x = -1;
-//     (*player).scaleX = -1;
-//   }
-//
-//   if (IsKeyDown(KEY_W) || IsGamepadButtonDown(0,
-//   GAMEPAD_BUTTON_LEFT_FACE_UP)) {
-//     vec.y = -1;
-//   } else if (IsKeyDown(KEY_S) ||
-//              IsGamepadButtonDown(0, GAMEPAD_BUTTON_LEFT_FACE_DOWN)) {
-//     vec.y = 1;
-//   }
-//
-//   if (vec.x != 0 || vec.y != 0) {
-//     vec = Vector2Normalize(vec);
-//   }
-//
-//   (*player).x += vec.x * PLAYER_SPEED * GetFrameTime();
-//   (*player).y += vec.y * PLAYER_SPEED * GetFrameTime();
-//
-//   Rectangle source_rec = {player->texture.width, 0,
-//                           player->texture.width * player->scaleX,
-//                           player->texture.height};
-//
-//   Rectangle dest_rec = {player->x, player->y, player->texture.width,
-//                         player->texture.height};
-//
-//   DrawTexturePro(player->texture, source_rec, dest_rec, (Vector2){0, 0}, 0,
-//                  WHITE);
-//   // DrawTexture(player->texture, player->x, player->y, WHITE);
-//
-//   if (IsKeyPressed(KEY_SPACE)) {
-//     struct Entity *old_next = player->next_entity;
-//     (*player).next_entity = malloc(sizeof(struct Entity));
-//     *(*player).next_entity =
-//         CreateBullet(player->x, player->y, player->scaleX, old_next);
-//   }
-// }
-//
-// struct Entity CreatePlayer();
-// struct Entity CreatePlayer() {
-//   struct Entity player = {};
-//
-//   player.texture = LoadTexture("boneco.png");
-//   player.Update = &UpdatePlayer;
-//   player.scaleX = 1.0;
-//   player.scaleY = 1.0;
-//
-//   return player;
-// }
+void UpdateNave(struct Entity *nave) {
+  if (game_state == 1) {
+    float mouse_x = (GetMouseX() - 400) / 21.0f;
+    float mouse_y = (GetMouseY() - 400) / -26.0f;
+    (*nave).z += nave->dir * BOMBA_SPEED * GetFrameTime() +
+                 difficulty * nave->dir * 0.5f;
+
+    if (Vector2Distance((Vector2){first_entity->z, 0.0f},
+                        (Vector2){nave->z, 0.0f}) <= 1.0f) {
+      game_state = 2;
+    }
+    if (Vector2Distance((Vector2){mouse_x, mouse_y},
+                        (Vector2){nave->z, nave->y}) <= 5.0f &&
+        IsMouseButtonPressed(0)) {
+      (*nave).dead = true;
+    }
+    if (nave->z > 15.0f || nave->z < -15.0f)
+      (*nave).dead = true;
+
+  } else if (game_state == 0) {
+    (*nave).dead = true;
+  }
+
+  DrawModelEx(nave_model, (Vector3){nave->x, nave->y, nave->z},
+              (Vector3){0, 0, 0}, 0.0f, (Vector3){2, 2, 2}, WHITE);
+
+  DrawCylinderEx((Vector3){nave->x, nave->y, nave->z},
+                 (Vector3){nave->x, 20.0f, nave->z}, 0.2f, 0.2f, 8, RED);
+}
+
+struct Entity CreateNave(float z_pos, struct Entity *next_entity) {
+  struct Entity nave = {};
+  nave.y = -10.0f;
+  nave.z = z_pos / fabs(z_pos) * 10.0f;
+  nave.dir = -z_pos / fabs(z_pos);
+  nave.Update = &UpdateNave;
+  nave.next_entity = next_entity;
+  return nave;
+}
 
 void UpdateDrawFrame(struct Entity *first_entity);
 
@@ -296,6 +247,7 @@ int main() {
 
   bomba_model = LoadModel("bomba.glb");
   foguete_model = LoadModel("foguete.glb");
+  nave_model = LoadModel("nave.glb");
 
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
@@ -330,15 +282,19 @@ void DrawLineCircles(Vector2 start, Vector2 end, float radius, Color color) {
 float timer = 0.0f;
 
 void UpdateDrawFrame(struct Entity *first_entity) {
+
   if (game_state == 1) {
     timer += GetFrameTime();
     if (timer >= 1.3f - difficulty * 3.0f) {
       struct Entity *bomba_pointer = malloc(sizeof(struct Entity));
       float random_inimigo = rand() % 100;
+      printf("random inimigo: %.3f\n", random_inimigo);
 
-      if (random_inimigo < 12)
+      if (random_inimigo < 25 && random_inimigo >= 12)
         *bomba_pointer =
             CreateFoguete(rand() % 16 - 8, first_entity->next_entity);
+      else if (random_inimigo < 12)
+        *bomba_pointer = CreateNave(rand() % 16 - 8, first_entity->next_entity);
       else
         *bomba_pointer =
             CreateBomba(rand() % 16 - 8, first_entity->next_entity);
@@ -355,10 +311,6 @@ void UpdateDrawFrame(struct Entity *first_entity) {
   BeginTextureMode(screen_tex);
   ClearBackground(RAYWHITE);
   BeginMode3D(camera);
-
-  // DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
-  // DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
-  // DrawModel(pipa_model, (Vector3){0, 10, 0}, 1, WHITE);
 
   struct Entity *entity = first_entity;
   struct Entity *previous_entity = NULL;
@@ -442,6 +394,14 @@ void UpdateDrawFrame(struct Entity *first_entity) {
     DrawText("APERTE ESPAÇO PARA COMEÇAR", 230, 720, 20, DARKGREEN);
     if (IsKeyPressed(KEY_SPACE)) {
       game_state = 1;
+    }
+  } else if (game_state == 2) {
+    DrawText("APERTE ESPAÇO PARA REINICIAR", 230, 720, 20, DARKGREEN);
+
+    if (IsKeyPressed(KEY_SPACE)) {
+      game_state = 0;
+      points = 0;
+      difficulty = 0;
     }
   }
 
